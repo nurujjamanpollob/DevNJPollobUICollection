@@ -27,7 +27,7 @@ public class MainActivity extends AppCompatActivity {
 
 
             BottomDialogView view1 = new BottomDialogView(MainActivity.this);
-            view1.setDialogResourceByLayout(R.layout.dialog_view);
+            view1.setDialogResourceByLayoutId(R.layout.dialog_view);
             view1.cancelDialogOnClickOutside(true);
             view1.setUILoadListener(new BottomDialogView.OnDialogUiLoadListener() {
                 @Override
@@ -37,7 +37,7 @@ public class MainActivity extends AppCompatActivity {
                     Button signup = view1.getViewByIdentity(R.id.sign_up, new Button(getApplicationContext()));
 
                     // Set sign up click listener
-                    signup.setOnClickListener(v -> view1.setDialogResourceByLayout(R.layout.dialog_view_sign_up));
+                    signup.setOnClickListener(v -> view1.setDialogResourceByLayoutId(R.layout.dialog_view_sign_up));
 
                 }
             });
