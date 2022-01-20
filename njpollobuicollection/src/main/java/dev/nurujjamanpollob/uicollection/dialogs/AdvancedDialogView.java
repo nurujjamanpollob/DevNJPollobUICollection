@@ -3,11 +3,16 @@ package dev.nurujjamanpollob.uicollection.dialogs;
 
 import android.content.Context;
 import android.graphics.Color;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 
+import androidx.annotation.AnimRes;
+import androidx.annotation.AnimatorRes;
 import androidx.annotation.IdRes;
 import androidx.annotation.LayoutRes;
 import androidx.annotation.NonNull;
@@ -54,6 +59,8 @@ import dev.nurujjamanpollob.uicollection.R;
  * Okay, this listener ensures that all View is 100% drawn by Android System.
  * So, you will be safely able to query your target View,
  * again findViewById(id) from your activity / fragment instance will give you NullPointerException.
+ * Why? because, the View you have passed, it is inflated by the context of BottomDialogView, not by Context of
+ * Your activity / fragment.
  *
  * So, this come with a solution
  * just call getViewByIdentity(viewId, ExpectedViewType) from interface BottomDialogView.OnDialogUiLoadListener{ onUiLoaded(){
@@ -78,7 +85,7 @@ import dev.nurujjamanpollob.uicollection.R;
  *
  */
 
-public class BottomDialogView extends AppCompatDialog {
+public class AdvancedDialogView extends AppCompatDialog {
 
     private final Context context;
     private Boolean cancelDialogOnClickOuside = false;
@@ -86,10 +93,11 @@ public class BottomDialogView extends AppCompatDialog {
     private boolean isShowing = false;
     private OnDialogUiLoadListener uiLoadListener;
     private int layoutId = 0;
+    private DialogOptions dialogOptions;
 
 
 
-    public BottomDialogView(@NonNull Context context) {
+    public AdvancedDialogView(@NonNull Context context) {
         super(context);
 
         this.context = context;
@@ -107,11 +115,12 @@ public class BottomDialogView extends AppCompatDialog {
      * @param dialogLayoutID layout ID of dialog view that needs to be drawn on screen.
      */
 
-    public void setDialogResourceByLayoutId(@LayoutRes int dialogLayoutID) {
+    public void setDialogResourceByLayoutId(@LayoutRes int dialogLayoutID, DialogOptions dialogGravityOptions) {
 
         this.layoutId = dialogLayoutID;
+        this.dialogOptions = dialogGravityOptions;
 
-            drawDialogUI(dialogLayoutID, false);
+            drawDialogUI(dialogLayoutID, false, dialogOptions);
 
 
     }
@@ -162,6 +171,7 @@ public class BottomDialogView extends AppCompatDialog {
 
         default void onUiLoaded(){}
         default void rootUI(CoordinatorLayout view){}
+        default void onAnimationFinished(Animation animation, int animationId){}
 
     }
 
@@ -170,14 +180,14 @@ public class BottomDialogView extends AppCompatDialog {
 
         this.uiLoadListener = uiLoadListener;
 
-        drawDialogUI(layoutId, isShowing());
+        drawDialogUI(layoutId, isShowing(), dialogOptions);
 
 
     }
 
 
 
-    private void drawDialogUI(int id, boolean skipExisting) {
+    private void drawDialogUI(int id, boolean skipExisting, DialogOptions dialogOptions) {
 
 
         if (!skipExisting) {
@@ -186,10 +196,26 @@ public class BottomDialogView extends AppCompatDialog {
             Window window = getWindow();
             window.getDecorView().setBackgroundColor(Color.TRANSPARENT);
             window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+            rootView = findViewById(R.id.custom_dialog_layout_root);
             // So, inflate the view and attach to CoordinatorLayout
             LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-            CoordinatorLayout cl = findViewById(R.id.bottom_view_dialog_root_coordinatorelayout);
-            rootView = findViewById(R.id.custom_dialog_layout_root);
+            CoordinatorLayout cl = getViewByIdentity(R.id.bottom_view_dialog_root_coordinatorelayout, new CoordinatorLayout(context));
+
+
+            //If Dialog Ui gravity mode is defined
+            if(dialogOptions != null) {
+
+                setDialogUiDirectionMode(cl, dialogOptions);
+
+
+            }else {
+
+
+                // Use default Ui gravity = bottom
+                setDialogUiDirectionMode(cl, DialogOptions.DIALOG_GRAVITY_BOTTOM);
+
+            }
+
             inflater.inflate(id, cl, true);
             // Set Dialog click outside listener
             cancelDialogOnClickOutside();
@@ -216,6 +242,56 @@ public class BottomDialogView extends AppCompatDialog {
 
 
     }
+
+
+    private void setDialogUiDirectionMode(CoordinatorLayout cl, DialogOptions dialogOptions){
+
+        CoordinatorLayout.LayoutParams coOrdinatorParam = new CoordinatorLayout.LayoutParams(CoordinatorLayout.LayoutParams.MATCH_PARENT, CoordinatorLayout.LayoutParams.WRAP_CONTENT);
+
+        // Set Dialog Gravity
+        coOrdinatorParam.gravity = dialogOptions == DialogOptions.DIALOG_GRAVITY_BOTTOM ? Gravity.BOTTOM :
+                dialogOptions == DialogOptions.DIALOG_GRAVITY_TOP ? Gravity.TOP : Gravity.CENTER;
+
+        cl.setLayoutParams(coOrdinatorParam);
+
+    }
+
+
+    public void setUiAnimation(@AnimRes int animationResId){
+
+        if(rootView != null){
+
+            Animation dialogAnimation = AnimationUtils.loadAnimation(context, animationResId);
+
+            // Animate The views
+            rootView.setAnimation(dialogAnimation);
+
+            dialogAnimation.setAnimationListener(new Animation.AnimationListener() {
+                @Override
+                public void onAnimationStart(Animation animation) {
+
+                }
+
+                @Override
+                public void onAnimationEnd(Animation animation) {
+
+                    if(uiLoadListener != null){
+                        uiLoadListener.onAnimationFinished(animation, animationResId);
+                    }
+
+                }
+
+                @Override
+                public void onAnimationRepeat(Animation animation) {
+
+                }
+            });
+        }
+
+    }
+
+
+
 
 
 }
